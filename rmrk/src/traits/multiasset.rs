@@ -1,5 +1,5 @@
 //! Trait definitions for MultiAsset module
-use crate::impls::rmrk::types::*;
+use crate::types::*;
 use ink_prelude::vec::Vec;
 use openbrush::{
     contracts::psp34::{

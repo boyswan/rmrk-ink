@@ -17,7 +17,7 @@ pub trait Internal {
 
 /// Trait definitions for Utils functions
 #[openbrush::trait_definition]
-pub trait Utils {
+pub trait Collection {
     /// Set new value for the baseUri.
     #[ink(message)]
     fn set_base_uri(&mut self, uri: PreludeString) -> Result<(), PSP34Error>;
@@ -25,16 +25,4 @@ pub trait Utils {
     /// Get URI for the token Id.
     #[ink(message)]
     fn token_uri(&self, token_id: u64) -> Result<PreludeString, PSP34Error>;
-
-    /// Get max supply of tokens.
-    #[ink(message)]
-    fn max_supply(&self) -> u64;
-
-    /// Get token mint price.
-    #[ink(message)]
-    fn price(&self) -> Balance;
-
-    /// Withdraw contract's balance.
-    #[ink(message)]
-    fn withdraw(&mut self) -> Result<(), PSP34Error>;
 }

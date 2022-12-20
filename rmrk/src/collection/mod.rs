@@ -5,13 +5,10 @@ use ink_prelude::string::{
     ToString,
 };
 
-use crate::impls::rmrk::{
-    errors::RmrkError,
-    types::MintingData,
-};
-pub use crate::traits::utils::{
+use crate::errors::RmrkError;
+pub use crate::traits::collection::{
+    Collection,
     Internal,
-    Utils,
 };
 use openbrush::{
     contracts::{
@@ -30,10 +27,17 @@ use openbrush::{
     },
 };
 
-impl<T> Utils for T
+pub const STORAGE_PSP34_KEY: u32 = openbrush::storage_unique_key!(Data);
+
+#[derive(Default, Debug)]
+#[openbrush::upgradeable_storage(STORAGE_PSP34_KEY)]
+pub struct Data {
+    pub collection_id: u32,
+}
+
+impl<T> Collection for T
 where
-    T: Storage<MintingData>
-        + Storage<psp34::Data<enumerable::Balances>>
+    T: Storage<psp34::Data<enumerable::Balances>>
         + Storage<reentrancy_guard::Data>
         + Storage<ownable::Data>
         + Storage<metadata::Data>
@@ -63,35 +67,12 @@ where
         token_uri = token_uri + &token_id.to_string() + &PreludeString::from(".json");
         Ok(token_uri)
     }
-
-    /// Get max supply of tokens
-    default fn max_supply(&self) -> u64 {
-        self.data::<MintingData>().max_supply
-    }
-
-    /// Get token mint price
-    default fn price(&self) -> Balance {
-        self.data::<MintingData>().price_per_mint
-    }
-
-    /// Withdraw contract's balance
-    #[modifiers(only_owner)]
-    default fn withdraw(&mut self) -> Result<(), PSP34Error> {
-        let balance = Self::env().balance();
-        let current_balance = balance
-            .checked_sub(Self::env().minimum_balance())
-            .unwrap_or_default();
-        Self::env()
-            .transfer(self.data::<ownable::Data>().owner(), current_balance)
-            .map_err(|_| PSP34Error::Custom(String::from(RmrkError::WithdrawalFailed.as_str())))?;
-        Ok(())
-    }
 }
 
 /// Helper trait for Psp34Custom
 impl<T> Internal for T
 where
-    T: Storage<MintingData> + Storage<psp34::Data<enumerable::Balances>>,
+    T: Storage<psp34::Data<enumerable::Balances>>,
 {
     /// Check if token is minted
     default fn _token_exists(&self, id: Id) -> Result<(), PSP34Error> {
@@ -99,21 +80,5 @@ where
             .owner_of(id)
             .ok_or(PSP34Error::TokenNotExists)?;
         Ok(())
-    }
-}
-
-//---------------------- T E S T ---------------------------------------------
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn check_value_overflow_ok2() {
-        struct testing {};
-        impl Psp34Custom for testing {}
-        assert_eq!(
-            testing._check_value(transferred_value, mint_amount),
-            Err(PSP34Error::Custom(RmrkError::BadMintValue.as_str()))
-        );
     }
 }

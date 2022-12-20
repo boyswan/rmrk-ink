@@ -1,5 +1,5 @@
 //! Trait definitions for Nesting module
-use crate::impls::rmrk::types::*;
+use crate::types::*;
 use openbrush::{
     contracts::psp34::{
         Id,

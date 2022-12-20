@@ -1,13 +1,13 @@
 //! This module enables multiasset capability of RMRK
 
-use crate::impls::rmrk::{
-    errors::RmrkError,
-    types::*,
-};
 pub use crate::traits::multiasset::{
     Internal,
     MultiAsset,
     MultiAssetEvents,
+};
+use crate::{
+    errors::RmrkError,
+    types::*,
 };
 use ink_prelude::vec::Vec;
 use openbrush::{
@@ -16,6 +16,7 @@ use openbrush::{
         psp34::extensions::enumerable::*,
     },
     modifiers,
+    storage::Mapping,
     traits::{
         AccountId,
         Storage,
@@ -23,21 +24,35 @@ use openbrush::{
     },
 };
 
+pub const STORAGE_MUSLTIASSET_KEY: u32 = openbrush::storage_unique_key!(MultiAssetData);
+
+#[derive(Default, Debug)]
+#[openbrush::upgradeable_storage(STORAGE_MUSLTIASSET_KEY)]
+pub struct Data {
+    /// List of available asset entries for this collection
+    pub collection_asset_entries: Vec<Asset>,
+
+    /// Mapping of tokenId to an array of active assets
+    pub accepted_assets: Mapping<Id, Vec<AssetId>>,
+
+    /// Mapping of tokenId to an array of pending assets
+    pub pending_assets: Mapping<Id, Vec<AssetId>>,
+}
+
 /// Implement internal helper trait for MultiAsset
 impl<T> Internal for T
 where
-    T: Storage<MultiAssetData> + Storage<psp34::Data<enumerable::Balances>>,
+    T: Storage<Data> + Storage<psp34::Data<enumerable::Balances>>,
 {
     /// Check if token is minted. Return the token uri
     default fn asset_id_exists(&self, asset_id: AssetId) -> Option<String> {
         if let Some(index) = self
-            .data::<MultiAssetData>()
+            .data::<Data>()
             .collection_asset_entries
             .iter()
             .position(|a| a.asset_id == asset_id)
         {
-            let asset_uri =
-                &self.data::<MultiAssetData>().collection_asset_entries[index].asset_uri;
+            let asset_uri = &self.data::<Data>().collection_asset_entries[index].asset_uri;
             return Some(asset_uri.clone())
         }
 
@@ -66,7 +81,7 @@ where
 
     /// Check if asset is already accepted
     default fn in_accepted(&self, token_id: &Id, asset_id: &AssetId) -> Result<(), PSP34Error> {
-        if let Some(children) = self.data::<MultiAssetData>().accepted_assets.get(token_id) {
+        if let Some(children) = self.data::<Data>().accepted_assets.get(token_id) {
             if children.contains(asset_id) {
                 return Err(PSP34Error::Custom(String::from(
                     RmrkError::AlreadyAddedAsset.as_str(),
@@ -78,7 +93,7 @@ where
 
     /// Check if asset is already pending
     default fn in_pending(&self, token_id: &Id, asset_id: &AssetId) -> Result<(), PSP34Error> {
-        if let Some(assets) = self.data::<MultiAssetData>().pending_assets.get(token_id) {
+        if let Some(assets) = self.data::<Data>().pending_assets.get(token_id) {
             if assets.contains(asset_id) {
                 return Err(PSP34Error::Custom(String::from(
                     RmrkError::AddingPendingAsset.as_str(),
@@ -90,7 +105,7 @@ where
 
     /// Check if asset is already pending
     default fn is_pending(&self, token_id: &Id, asset_id: &AssetId) -> Result<(), PSP34Error> {
-        if let Some(assets) = self.data::<MultiAssetData>().pending_assets.get(token_id) {
+        if let Some(assets) = self.data::<Data>().pending_assets.get(token_id) {
             if !assets.contains(asset_id) {
                 return Err(PSP34Error::Custom(String::from(
                     RmrkError::AssetIdNotFound.as_str(),
@@ -102,7 +117,7 @@ where
 
     /// Check if asset is already accepted
     default fn is_accepted(&self, token_id: &Id, asset_id: &AssetId) -> Result<(), PSP34Error> {
-        if let Some(assets) = self.data::<MultiAssetData>().accepted_assets.get(token_id) {
+        if let Some(assets) = self.data::<Data>().accepted_assets.get(token_id) {
             if !assets.contains(asset_id) {
                 return Err(PSP34Error::Custom(String::from(
                     RmrkError::AssetIdNotFound.as_str(),
@@ -115,13 +130,13 @@ where
     /// Add the asset to the list of accepted assets
     default fn add_to_accepted_assets(&mut self, token_id: &Id, asset_id: &AssetId) {
         let mut assets = self
-            .data::<MultiAssetData>()
+            .data::<Data>()
             .accepted_assets
             .get(&token_id)
             .unwrap_or(Vec::new());
         if !assets.contains(&asset_id) {
             assets.push(*asset_id);
-            self.data::<MultiAssetData>()
+            self.data::<Data>()
                 .accepted_assets
                 .insert(&token_id, &assets);
         }
@@ -131,13 +146,13 @@ where
     /// Add the asset to the list of pending assets
     default fn add_to_pending_assets(&mut self, token_id: &Id, asset_id: &AssetId) {
         let mut assets = self
-            .data::<MultiAssetData>()
+            .data::<Data>()
             .pending_assets
             .get(&token_id)
             .unwrap_or(Vec::new());
         if !assets.contains(&asset_id) {
             assets.push(*asset_id);
-            self.data::<MultiAssetData>()
+            self.data::<Data>()
                 .pending_assets
                 .insert(&token_id, &assets);
         }
@@ -149,13 +164,13 @@ where
         token_id: &Id,
         asset_id: &AssetId,
     ) -> Result<(), PSP34Error> {
-        let mut assets = self
-            .data::<MultiAssetData>()
-            .pending_assets
-            .get(&token_id)
-            .ok_or(PSP34Error::Custom(String::from(
-                RmrkError::InvalidAssetId.as_str(),
-            )))?;
+        let mut assets =
+            self.data::<Data>()
+                .pending_assets
+                .get(&token_id)
+                .ok_or(PSP34Error::Custom(String::from(
+                    RmrkError::InvalidAssetId.as_str(),
+                )))?;
 
         let index = assets
             .iter()
@@ -165,7 +180,7 @@ where
             )))?;
         assets.remove(index);
 
-        self.data::<MultiAssetData>()
+        self.data::<Data>()
             .pending_assets
             .insert(&token_id, &assets);
 
@@ -178,13 +193,13 @@ where
         token_id: &Id,
         asset_id: &AssetId,
     ) -> Result<(), PSP34Error> {
-        let mut assets = self
-            .data::<MultiAssetData>()
-            .accepted_assets
-            .get(&token_id)
-            .ok_or(PSP34Error::Custom(String::from(
-                RmrkError::InvalidAssetId.as_str(),
-            )))?;
+        let mut assets =
+            self.data::<Data>()
+                .accepted_assets
+                .get(&token_id)
+                .ok_or(PSP34Error::Custom(String::from(
+                    RmrkError::InvalidAssetId.as_str(),
+                )))?;
 
         let index = assets
             .iter()
@@ -194,7 +209,7 @@ where
             )))?;
         assets.remove(index);
 
-        self.data::<MultiAssetData>()
+        self.data::<Data>()
             .accepted_assets
             .insert(&token_id, &assets);
 
@@ -204,9 +219,7 @@ where
 
 impl<T> MultiAsset for T
 where
-    T: Storage<MultiAssetData>
-        + Storage<psp34::Data<enumerable::Balances>>
-        + Storage<ownable::Data>,
+    T: Storage<Data> + Storage<psp34::Data<enumerable::Balances>> + Storage<ownable::Data>,
 {
     /// Used to add a asset entry.
     #[modifiers(only_owner)]
@@ -223,15 +236,13 @@ where
                 RmrkError::AssetIdAlreadyExists.as_str(),
             )))
         };
-        self.data::<MultiAssetData>()
-            .collection_asset_entries
-            .push(Asset {
-                asset_id,
-                equippable_group_id,
-                base_id,
-                asset_uri,
-                part_ids,
-            });
+        self.data::<Data>().collection_asset_entries.push(Asset {
+            asset_id,
+            equippable_group_id,
+            base_id,
+            asset_uri,
+            part_ids,
+        });
         self._emit_asset_set_event(&asset_id);
 
         Ok(())
@@ -307,11 +318,7 @@ where
     fn set_priority(&mut self, token_id: Id, priorities: Vec<AssetId>) -> Result<(), PSP34Error> {
         let token_owner = self.ensure_exists(&token_id)?;
         self.ensure_token_owner(token_owner)?;
-        if let Some(accepted_assets) = self
-            .data::<MultiAssetData>()
-            .accepted_assets
-            .get(token_id.clone())
-        {
+        if let Some(accepted_assets) = self.data::<Data>().accepted_assets.get(&token_id.clone()) {
             if accepted_assets.len() != priorities.len() {
                 return Err(PSP34Error::Custom(String::from(
                     RmrkError::BadPriorityLength.as_str(),
@@ -326,7 +333,7 @@ where
             }
         }
 
-        self.data::<MultiAssetData>()
+        self.data::<Data>()
             .accepted_assets
             .insert(&token_id, &priorities);
         self._emit_asset_priority_set_event(&token_id, priorities);
@@ -335,24 +342,22 @@ where
 
     /// Used to retrieve the total number of asset entries
     fn total_assets(&self) -> u32 {
-        self.data::<MultiAssetData>().collection_asset_entries.len() as u32
+        self.data::<Data>().collection_asset_entries.len() as u32
     }
 
     /// Used to retrieve the total number of assets per token
     fn total_token_assets(&self, token_id: Id) -> Result<(u64, u64), PSP34Error> {
         self.ensure_exists(&token_id)?;
 
-        let accepted_assets_on_token =
-            match self.data::<MultiAssetData>().accepted_assets.get(&token_id) {
-                Some(assets) => assets.len() as u64,
-                None => 0,
-            };
+        let accepted_assets_on_token = match self.data::<Data>().accepted_assets.get(&token_id) {
+            Some(assets) => assets.len() as u64,
+            None => 0,
+        };
 
-        let pending_assets_on_token =
-            match self.data::<MultiAssetData>().pending_assets.get(&token_id) {
-                Some(assets) => assets.len() as u64,
-                None => 0,
-            };
+        let pending_assets_on_token = match self.data::<Data>().pending_assets.get(&token_id) {
+            Some(assets) => assets.len() as u64,
+            None => 0,
+        };
 
         Ok((accepted_assets_on_token, pending_assets_on_token))
     }
@@ -365,14 +370,14 @@ where
     /// Fetch all accepted assets for the token_id
     fn get_accepted_token_assets(&self, token_id: Id) -> Result<Option<Vec<AssetId>>, PSP34Error> {
         self.ensure_exists(&token_id)?;
-        Ok(self.data::<MultiAssetData>().accepted_assets.get(&token_id))
+        Ok(self.data::<Data>().accepted_assets.get(&token_id))
     }
 }
 
 /// Event trait for MultiAssets
 impl<T> MultiAssetEvents for T
 where
-    T: Storage<MultiAssetData>,
+    T: Storage<Data>,
 {
     /// Used to notify listeners that an asset object is initialized at `assetId`.
     default fn _emit_asset_set_event(&self, _asset_id: &AssetId) {}

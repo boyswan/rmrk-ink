@@ -24,17 +24,16 @@ pub mod rmrk_contract {
             String,
         },
     };
+
     use rmrk::{
-        impls::rmrk::{
-            types::*,
-            *,
-        },
         traits::{
+            collection::*,
             minting::*,
             multiasset::*,
             nesting::*,
-            utils::*,
         },
+        types::*,
+        *,
     };
 
     // Event definitions
@@ -161,7 +160,7 @@ pub mod rmrk_contract {
     // Rmrk contract storage
     #[ink(storage)]
     #[derive(Default, SpreadAllocate, Storage)]
-    pub struct Rmrk {
+    pub struct MyContract {
         #[storage_field]
         psp34: psp34::Data<enumerable::Balances>,
         #[storage_field]
@@ -171,32 +170,16 @@ pub mod rmrk_contract {
         #[storage_field]
         metadata: metadata::Data,
         #[storage_field]
-        utils: types::UtilsData,
+        nesting: rmrk::nesting::Data,
         #[storage_field]
-        nesting: types::NestingData,
+        multiasset: rmrk::multiasset::Data,
         #[storage_field]
-        multiasset: types::MultiAssetData,
+        minting: rmrk::minting::Data,
         #[storage_field]
-        minting: types::MintingData,
+        collection: rmrk::collection::Data,
     }
 
-    impl PSP34 for Rmrk {}
-
-    impl Ownable for Rmrk {}
-
-    impl PSP34Metadata for Rmrk {}
-
-    impl PSP34Enumerable for Rmrk {}
-
-    impl Utils for Rmrk {}
-
-    impl Minting for Rmrk {}
-
-    impl Nesting for Rmrk {}
-
-    impl MultiAsset for Rmrk {}
-
-    impl Rmrk {
+    impl MyContract {
         /// Instantiate new RMRK contract
         #[ink(constructor)]
         pub fn new(
@@ -210,24 +193,24 @@ pub mod rmrk_contract {
             _royalty: u8,
         ) -> Self {
             ink_env::debug_println!("####### initializing RMRK contract");
-            ink_lang::codegen::initialize_contract(|instance: &mut Rmrk| {
-                instance._init_with_owner(instance.env().caller());
-                let collection_id = instance.collection_id();
-                instance._set_attribute(collection_id.clone(), String::from("name"), name);
-                instance._set_attribute(collection_id.clone(), String::from("symbol"), symbol);
-                instance._set_attribute(collection_id.clone(), String::from("baseUri"), base_uri);
-                instance._set_attribute(
-                    collection_id,
-                    String::from("collection_metadata"),
+            ink_lang::codegen::initialize_contract(|instance: &mut MyContract| {
+                Rmrk::configure(
+                    instance,
+                    name,
+                    symbol,
+                    base_uri,
+                    max_supply,
+                    price_per_mint,
                     collection_metadata,
                 );
-                instance.minting.max_supply = max_supply;
-                instance.minting.price_per_mint = price_per_mint;
             })
         }
+
+        #[ink(message)]
+        pub fn foo(&self) {}
     }
 
-    impl psp34::Internal for Rmrk {
+    impl psp34::Internal for MyContract {
         /// Emit Transfer event
         fn _emit_transfer_event(&self, from: Option<AccountId>, to: Option<AccountId>, id: Id) {
             self.env().emit_event(Transfer { from, to, id });
@@ -250,7 +233,7 @@ pub mod rmrk_contract {
         }
     }
 
-    impl nesting::NestingEvents for Rmrk {
+    impl nesting::NestingEvents for MyContract {
         /// Emit ChildAdded event
         fn _emit_added_child_event(&self, to: &Id, collection: &AccountId, child: &Id) {
             self.env().emit_event(ChildAdded {
@@ -297,7 +280,8 @@ pub mod rmrk_contract {
             });
         }
     }
-    impl multiasset::MultiAssetEvents for Rmrk {
+
+    impl multiasset::MultiAssetEvents for MyContract {
         /// Used to notify listeners that an asset object is initialized at `assetId`.
         fn _emit_asset_set_event(&self, asset_id: &AssetId) {
             self.env().emit_event(AssetSet { asset: *asset_id });
@@ -359,7 +343,7 @@ pub mod rmrk_contract {
         };
         use ink_lang as ink;
         use ink_prelude::string::String as PreludeString;
-        use rmrk::impls::rmrk::{
+        use rmrk::{
             errors::RmrkError,
             minting::Internal,
         };
@@ -388,9 +372,9 @@ pub mod rmrk_contract {
             assert_eq!(rmrk.price(), PRICE);
         }
 
-        fn init() -> Rmrk {
+        fn init() -> MyContract {
             let accounts = default_accounts();
-            Rmrk::new(
+            MyContract::new(
                 String::from("Rmrk Project"),
                 String::from("RMK"),
                 String::from(BASE_URI),
@@ -489,27 +473,27 @@ pub mod rmrk_contract {
             assert_eq!(rmrk.total_supply(), 0);
         }
 
-        #[ink::test]
-        fn withdrawal_works() {
-            let mut rmrk = init();
-            let accounts = default_accounts();
-            set_balance(accounts.bob, PRICE);
-            set_sender(accounts.bob);
+        // #[ink::test]
+        // fn withdrawal_works() {
+        //     let mut rmrk = init();
+        //     let accounts = default_accounts();
+        //     set_balance(accounts.bob, PRICE);
+        //     set_sender(accounts.bob);
 
-            assert!(pay_with_call!(rmrk.mint_next(), PRICE).is_ok());
-            let expected_contract_balance = PRICE + rmrk.env().minimum_balance();
-            assert_eq!(rmrk.env().balance(), expected_contract_balance);
+        //     assert!(pay_with_call!(rmrk.mint_next(), PRICE).is_ok());
+        //     let expected_contract_balance = PRICE + rmrk.env().minimum_balance();
+        //     assert_eq!(rmrk.env().balance(), expected_contract_balance);
 
-            // Bob fails to withdraw
-            set_sender(accounts.bob);
-            assert!(rmrk.withdraw().is_err());
-            assert_eq!(rmrk.env().balance(), expected_contract_balance);
+        //     // Bob fails to withdraw
+        //     set_sender(accounts.bob);
+        //     assert!(rmrk.withdraw().is_err());
+        //     assert_eq!(rmrk.env().balance(), expected_contract_balance);
 
-            // Alice (contract owner) withdraws. Existential minimum is still set
-            set_sender(accounts.alice);
-            assert!(rmrk.withdraw().is_ok());
-            // assert_eq!(rmrk.env().balance(), rmrk.env().minimum_balance());
-        }
+        //     // Alice (contract owner) withdraws. Existential minimum is still set
+        //     set_sender(accounts.alice);
+        //     assert!(rmrk.withdraw().is_ok());
+        //     // assert_eq!(rmrk.env().balance(), rmrk.env().minimum_balance());
+        // }
 
         #[ink::test]
         fn token_uri_works() {
@@ -569,7 +553,7 @@ pub mod rmrk_contract {
         fn check_supply_overflow_ok() {
             let accounts = default_accounts();
             let max_supply = u64::MAX - 1;
-            let mut rmrk = Rmrk::new(
+            let mut rmrk = MyContract::new(
                 String::from("Remark Project"),
                 String::from("RMK"),
                 String::from(BASE_URI),
@@ -599,7 +583,7 @@ pub mod rmrk_contract {
             let accounts = default_accounts();
             let max_supply = u64::MAX;
             let price = u128::MAX as u128;
-            let rmrk = Rmrk::new(
+            let rmrk = MyContract::new(
                 String::from("Remark Project"),
                 String::from("RMK"),
                 String::from(BASE_URI),

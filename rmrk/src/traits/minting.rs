@@ -1,8 +1,22 @@
 //! RMRK minting traits
 
 use openbrush::{
-    contracts::psp34::PSP34Error,
-    traits::AccountId,
+    contracts::{
+        ownable::*,
+        psp34::{
+            extensions::{
+                enumerable::*,
+                metadata::*,
+            },
+            PSP34Error,
+        },
+        reentrancy_guard::*,
+    },
+    traits::{
+        AccountId,
+        Balance,
+        Storage,
+    },
 };
 
 #[openbrush::wrapper]
@@ -15,6 +29,8 @@ pub trait Internal {
 
     /// Check amount of tokens to be minted.
     fn _check_amount(&self, mint_amount: u64) -> Result<(), PSP34Error>;
+
+    fn _token_exists(&self, id: Id) -> Result<(), PSP34Error>;
 }
 
 /// Trait definitions for Minting functions
@@ -27,4 +43,12 @@ pub trait Minting {
     /// Mint one or more tokens.
     #[ink(message, payable)]
     fn mint(&mut self, to: AccountId, mint_amount: u64) -> Result<(), PSP34Error>;
+
+    /// Get max supply of tokens.
+    #[ink(message)]
+    fn max_supply(&self) -> u64;
+
+    /// Get token mint price.
+    #[ink(message)]
+    fn price(&self) -> Balance;
 }

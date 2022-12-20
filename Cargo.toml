@@ -1,8 +1,7 @@
 [workspace]
 members = [
     "contracts/**",
+    "rmrk"
 ]
 
-exclude = [
-    "logics",
-]
+ 
