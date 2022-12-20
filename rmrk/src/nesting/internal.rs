@@ -1,22 +1,19 @@
 //! This module enables nesting of RMRK or any other NFT which inherits PSP34.
 
-pub use crate::{
+use crate::{
+    errors::RmrkError,
     nesting::Data,
     traits::nesting::{
         Internal,
         NestingEvents,
     },
-};
-
-use crate::{
-    errors::RmrkError,
     types::*,
 };
+
 use ink_env::CallFlags;
 use ink_prelude::vec::Vec;
 use openbrush::{
     contracts::psp34::extensions::enumerable::*,
-    storage::Mapping,
     traits::{
         AccountId,
         Storage,

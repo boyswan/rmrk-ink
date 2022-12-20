@@ -27,6 +27,8 @@ use openbrush::{
     },
 };
 
+mod internal;
+
 pub const STORAGE_PSP34_KEY: u32 = openbrush::storage_unique_key!(Data);
 
 #[derive(Default, Debug)]
@@ -66,19 +68,5 @@ where
         let mut token_uri = PreludeString::from_utf8(value.unwrap()).unwrap();
         token_uri = token_uri + &token_id.to_string() + &PreludeString::from(".json");
         Ok(token_uri)
-    }
-}
-
-/// Helper trait for Psp34Custom
-impl<T> Internal for T
-where
-    T: Storage<psp34::Data<enumerable::Balances>>,
-{
-    /// Check if token is minted
-    default fn _token_exists(&self, id: Id) -> Result<(), PSP34Error> {
-        self.data::<psp34::Data<enumerable::Balances>>()
-            .owner_of(id)
-            .ok_or(PSP34Error::TokenNotExists)?;
-        Ok(())
     }
 }
