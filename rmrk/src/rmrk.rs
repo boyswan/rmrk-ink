@@ -20,7 +20,7 @@ use openbrush::{
 };
 
 pub trait Rmrk<T> {
-    fn configure(
+    fn config(
         &mut self,
         name: String,
         symbol: String,
@@ -30,7 +30,7 @@ pub trait Rmrk<T> {
         collection_metadata: String,
     );
 
-    fn configure_with_royalties(
+    fn config_with_royalties(
         &mut self,
         name: String,
         symbol: String,
@@ -47,15 +47,16 @@ impl<T> Rmrk<T> for T
 where
     T: openbrush::traits::DefaultEnv
         + Storage<minting::Data>
-        + Storage<collection::Data>
+        // + Storage<collection::Data>
+        // + Storage<multiasset::Data>
+        // + Storage<nesting::Data>
         + Storage<psp34::Data<enumerable::Balances>>
-        + Storage<reentrancy_guard::Data>
         + Storage<ownable::Data>
         + Storage<metadata::Data>
         + psp34::extensions::metadata::PSP34Metadata
         + psp34::Internal,
 {
-    fn configure(
+    fn config(
         &mut self,
         name: String,
         symbol: String,
@@ -83,7 +84,7 @@ where
         minting.price_per_mint = price_per_mint;
     }
 
-    fn configure_with_royalties(
+    fn config_with_royalties(
         &mut self,
         name: String,
         symbol: String,
@@ -94,7 +95,7 @@ where
         _royalty_receiver: AccountId,
         _royalty: u8,
     ) {
-        Self::configure(
+        Self::config(
             self,
             name,
             symbol,
@@ -103,5 +104,7 @@ where
             price_per_mint,
             collection_metadata,
         );
+
+        // Handle royalty inits here
     }
 }

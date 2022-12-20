@@ -189,12 +189,12 @@ pub mod rmrk_contract {
             max_supply: u64,
             price_per_mint: Balance,
             collection_metadata: String,
-            _royalty_receiver: AccountId,
-            _royalty: u8,
+            royalty_receiver: AccountId,
+            royalty: u8,
         ) -> Self {
             ink_env::debug_println!("####### initializing RMRK contract");
             ink_lang::codegen::initialize_contract(|instance: &mut MyContract| {
-                Rmrk::configure(
+                Rmrk::config_with_royalties(
                     instance,
                     name,
                     symbol,
@@ -202,13 +202,21 @@ pub mod rmrk_contract {
                     max_supply,
                     price_per_mint,
                     collection_metadata,
+                    royalty_receiver,
+                    royalty,
                 );
             })
         }
-
-        #[ink(message)]
-        pub fn foo(&self) {}
     }
+
+    impl PSP34 for MyContract {}
+    impl Ownable for MyContract {}
+    impl PSP34Metadata for MyContract {}
+    impl PSP34Enumerable for MyContract {}
+    impl Collection for MyContract {}
+    impl Minting for MyContract {}
+    impl Nesting for MyContract {}
+    impl MultiAsset for MyContract {}
 
     impl psp34::Internal for MyContract {
         /// Emit Transfer event
