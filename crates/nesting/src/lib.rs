@@ -1,24 +1,39 @@
 //! This module enables nesting of RMRK or any other NFT which inherits PSP34.
+#![cfg_attr(not(feature = "std"), no_std)]
+#![feature(min_specialization)]
 
-use crate::impls::rmrk::{
-    errors::RmrkError,
+pub mod trait_def;
+
+use rmrk_common::{
+    error::RmrkError,
     types::*,
 };
-pub use crate::traits::nesting::{
-    Internal,
-    Nesting,
-    NestingEvents,
-};
+
 use ink_env::CallFlags;
 use ink_prelude::vec::Vec;
 use openbrush::{
     contracts::psp34::extensions::enumerable::*,
+    storage::Mapping,
     traits::{
         AccountId,
         Storage,
         String,
     },
 };
+pub use trait_def::{
+    Events,
+    Internal,
+    Nesting,
+};
+
+pub const STORAGE_NESTING_KEY: u32 = openbrush::storage_unique_key!(NestingData);
+
+#[derive(Default, Debug)]
+#[openbrush::upgradeable_storage(STORAGE_NESTING_KEY)]
+pub struct NestingData {
+    pub pending_children: Mapping<Id, Vec<ChildNft>>,
+    pub accepted_children: Mapping<Id, Vec<ChildNft>>,
+}
 
 /// Implement internal helper trait for Nesting
 impl<T> Internal for T
@@ -411,7 +426,7 @@ where
 }
 
 /// Event trait for Nesting
-impl<T> NestingEvents for T
+impl<T> Events for T
 where
     T: Storage<NestingData> + Storage<psp34::Data<enumerable::Balances>>,
 {

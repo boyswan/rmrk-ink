@@ -1,16 +1,14 @@
 //! RMRK minting implementation
+#![cfg_attr(not(feature = "std"), no_std)]
+#![feature(min_specialization)]
 
-use crate::impls::rmrk::{
-    errors::RmrkError,
-    types::MintingData,
-};
-pub use crate::traits::minting::{
-    Internal,
-    Minting,
-};
+pub mod trait_def;
+
+use rmrk_common::error::RmrkError;
+
 use openbrush::{
     contracts::{
-        ownable::*,
+        ownable,
         psp34::extensions::{
             enumerable::*,
             metadata::*,
@@ -20,10 +18,26 @@ use openbrush::{
     modifiers,
     traits::{
         AccountId,
+        Balance,
         Storage,
         String,
     },
 };
+
+pub use trait_def::{
+    Internal,
+    Minting,
+};
+
+pub const STORAGE_MINTING_KEY: u32 = openbrush::storage_unique_key!(MintingData);
+
+#[derive(Default, Debug)]
+#[openbrush::upgradeable_storage(STORAGE_MINTING_KEY)]
+pub struct MintingData {
+    pub last_token_id: u64,
+    pub max_supply: u64,
+    pub price_per_mint: Balance,
+}
 
 impl<T> Minting for T
 where

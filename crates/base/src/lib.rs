@@ -1,29 +1,55 @@
 //! RMRK Base implementation
+#![cfg_attr(not(feature = "std"), no_std)]
+#![feature(min_specialization)]
 
-use crate::impls::rmrk::{
-    errors::RmrkError,
-    types::*,
-};
-pub use crate::traits::base::{
+pub mod trait_def;
+
+pub use trait_def::{
     Base,
     Internal,
 };
+
 use ink_prelude::{
     string::String as PreludeString,
     vec::Vec,
 };
+
 use openbrush::{
     contracts::{
         ownable::*,
         psp34::extensions::enumerable::*,
     },
     modifiers,
+    storage::Mapping,
     traits::{
         AccountId,
         Storage,
         String,
     },
 };
+use rmrk_common::{
+    error::RmrkError,
+    types::*,
+};
+
+pub const STORAGE_BASE_KEY: u32 = openbrush::storage_unique_key!(BaseData);
+
+/// The structure used to describe the Base
+#[derive(Default, Debug)]
+#[openbrush::upgradeable_storage(STORAGE_BASE_KEY)]
+pub struct BaseData {
+    /// List of all parts of Base.
+    pub part_ids: Vec<PartId>,
+
+    /// Mapping for all part details.
+    pub parts: Mapping<PartId, Part>,
+
+    /// Counter for assigning new parts to Base.
+    pub next_part_id: PartId,
+
+    /// Metadata for Base
+    pub base_metadata_uri: String,
+}
 
 /// Implement internal helper trait for Base
 impl<T> Internal for T
@@ -31,7 +57,7 @@ where
     T: Storage<BaseData>,
 {
     default fn ensure_only_slot(&self, part_id: PartId) -> Result<Part, PSP34Error> {
-        if let Some(part) = self.data::<BaseData>().parts.get(part_id) {
+        if let Some(part) = self.data::<BaseData>().parts.get(&part_id) {
             if part.part_type != PartType::Slot {
                 return Err(PSP34Error::Custom(String::from(
                     RmrkError::PartIsNotSlot.as_str(),
@@ -45,6 +71,7 @@ where
         }
     }
 }
+
 impl<T> Base for T
 where
     T: Storage<BaseData> + Storage<ownable::Data>,
@@ -62,7 +89,7 @@ where
                     RmrkError::BadConfig.as_str(),
                 )))
             }
-            self.data::<BaseData>().parts.insert(part_id, &part);
+            self.data::<BaseData>().parts.insert(&part_id, &part);
             self.data::<BaseData>().part_ids.push(part_id);
             self.data::<BaseData>().next_part_id += 1;
         }
@@ -79,7 +106,7 @@ where
     ) -> Result<(), PSP34Error> {
         let mut part = self.ensure_only_slot(part_id)?;
         part.equippable.extend(equippable_address);
-        self.data::<BaseData>().parts.insert(part_id, &part);
+        self.data::<BaseData>().parts.insert(&part_id, &part);
 
         Ok(())
     }
@@ -90,7 +117,7 @@ where
         let mut part = self.ensure_only_slot(part_id)?;
         part.is_equippable_by_all = false;
         part.equippable.clear();
-        self.data::<BaseData>().parts.insert(part_id, &part);
+        self.data::<BaseData>().parts.insert(&part_id, &part);
 
         Ok(())
     }
@@ -100,7 +127,7 @@ where
     default fn set_equippable_by_all(&mut self, part_id: PartId) -> Result<(), PSP34Error> {
         let mut part = self.ensure_only_slot(part_id)?;
         part.is_equippable_by_all = true;
-        self.data::<BaseData>().parts.insert(part_id, &part);
+        self.data::<BaseData>().parts.insert(&part_id, &part);
 
         Ok(())
     }
@@ -128,12 +155,12 @@ where
 
     /// Get the part details for the given PartId.
     default fn get_part(&self, part_id: PartId) -> Option<Part> {
-        self.data::<BaseData>().parts.get(part_id)
+        self.data::<BaseData>().parts.get(&part_id)
     }
 
     /// Check whether the given address is allowed to equip the desired `PartId`.
     default fn is_equippable(&self, part_id: PartId, target_address: AccountId) -> bool {
-        if let Some(part) = self.data::<BaseData>().parts.get(part_id) {
+        if let Some(part) = self.data::<BaseData>().parts.get(&part_id) {
             if part.equippable.contains(&target_address) {
                 return true
             }
@@ -144,7 +171,7 @@ where
 
     /// Checks if the given `PartId` can be equipped by any collection
     default fn is_equippable_by_all(&self, part_id: PartId) -> bool {
-        if let Some(part) = self.data::<BaseData>().parts.get(part_id) {
+        if let Some(part) = self.data::<BaseData>().parts.get(&part_id) {
             return part.is_equippable_by_all
         }
 

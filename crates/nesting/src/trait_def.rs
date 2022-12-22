@@ -1,5 +1,6 @@
 //! Trait definitions for Nesting module
-use crate::impls::rmrk::types::*;
+use rmrk_common::types::*;
+
 use openbrush::{
     contracts::psp34::{
         Id,
@@ -114,7 +115,7 @@ pub trait Nesting {
 
 /// Trait definitions for Nesting ink events
 #[openbrush::trait_definition]
-pub trait NestingEvents {
+pub trait Events {
     /// Emit ChildAdded event.
     fn _emit_added_child_event(&self, to: &Id, collection: &AccountId, child: &Id);
 

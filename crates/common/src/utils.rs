@@ -5,14 +5,11 @@ use ink_prelude::string::{
     ToString,
 };
 
-use crate::impls::rmrk::{
-    errors::RmrkError,
-    types::MintingData,
+use crate::{
+    error::RmrkError,
+    types::*,
 };
-pub use crate::traits::utils::{
-    Internal,
-    Utils,
-};
+
 use openbrush::{
     contracts::{
         ownable::*,
@@ -30,10 +27,39 @@ use openbrush::{
     },
 };
 
+/// Trait definitions for Utils internal functions.
+pub trait Internal {
+    /// Check if token is minted.
+    fn _token_exists(&self, id: Id) -> Result<(), PSP34Error>;
+}
+
+/// Trait definitions for Utils functions
+#[openbrush::trait_definition]
+pub trait Utils {
+    /// Set new value for the baseUri.
+    #[ink(message)]
+    fn set_base_uri(&mut self, uri: PreludeString) -> Result<(), PSP34Error>;
+
+    /// Get URI for the token Id.
+    #[ink(message)]
+    fn token_uri(&self, token_id: u64) -> Result<PreludeString, PSP34Error>;
+
+    // /// Get max supply of tokens.
+    // #[ink(message)]
+    // fn max_supply(&self) -> u64;
+
+    // /// Get token mint price.
+    // #[ink(message)]
+    // fn price(&self) -> Balance;
+
+    /// Withdraw contract's balance.
+    #[ink(message)]
+    fn withdraw(&mut self) -> Result<(), PSP34Error>;
+}
+
 impl<T> Utils for T
 where
-    T: Storage<MintingData>
-        + Storage<psp34::Data<enumerable::Balances>>
+    T: Storage<psp34::Data<enumerable::Balances>>
         + Storage<reentrancy_guard::Data>
         + Storage<ownable::Data>
         + Storage<metadata::Data>
@@ -64,15 +90,15 @@ where
         Ok(token_uri)
     }
 
-    /// Get max supply of tokens
-    default fn max_supply(&self) -> u64 {
-        self.data::<MintingData>().max_supply
-    }
+    // /// Get max supply of tokens
+    // default fn max_supply(&self) -> u64 {
+    //     self.data::<MintingData>().max_supply
+    // }
 
-    /// Get token mint price
-    default fn price(&self) -> Balance {
-        self.data::<MintingData>().price_per_mint
-    }
+    // /// Get token mint price
+    // default fn price(&self) -> Balance {
+    //     self.data::<MintingData>().price_per_mint
+    // }
 
     /// Withdraw contract's balance
     #[modifiers(only_owner)]
@@ -91,7 +117,7 @@ where
 /// Helper trait for Psp34Custom
 impl<T> Internal for T
 where
-    T: Storage<MintingData> + Storage<psp34::Data<enumerable::Balances>>,
+    T: Storage<psp34::Data<enumerable::Balances>>,
 {
     /// Check if token is minted
     default fn _token_exists(&self, id: Id) -> Result<(), PSP34Error> {
@@ -102,18 +128,18 @@ where
     }
 }
 
-//---------------------- T E S T ---------------------------------------------
-#[cfg(test)]
-mod tests {
-    use super::*;
+// //---------------------- T E S T ---------------------------------------------
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[test]
-    fn check_value_overflow_ok2() {
-        struct testing {};
-        impl Psp34Custom for testing {}
-        assert_eq!(
-            testing._check_value(transferred_value, mint_amount),
-            Err(PSP34Error::Custom(RmrkError::BadMintValue.as_str()))
-        );
-    }
-}
+//     #[test]
+//     fn check_value_overflow_ok2() {
+//         struct testing {};
+//         impl Psp34Custom for testing {}
+//         assert_eq!(
+//             testing._check_value(transferred_value, mint_amount),
+//             Err(PSP34Error::Custom(RmrkError::BadMintValue.as_str()))
+//         );
+//     }
+// }

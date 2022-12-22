@@ -1,5 +1,6 @@
 //! Trait definitions for MultiAsset module
-use crate::impls::rmrk::types::*;
+use rmrk_common::types::*;
+
 use ink_prelude::vec::Vec;
 use openbrush::{
     contracts::psp34::{
@@ -161,7 +162,7 @@ pub trait Internal {
 
 /// Trait definitions for Resource ink events
 #[openbrush::trait_definition]
-pub trait MultiAssetEvents {
+pub trait Events {
     /// Used to notify listeners that an asset object is initialized at `assetId`.
     /// # Arguments:
     /// * assetId ID of the asset that was initialized

@@ -1,6 +1,6 @@
 //! RMRK Base traits
+use rmrk_common::types::*;
 
-use crate::impls::rmrk::types::*;
 use ink_prelude::{
     string::String as PreludeString,
     vec::Vec,

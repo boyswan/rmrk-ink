@@ -1,27 +1,54 @@
 //! This module enables multiasset capability of RMRK
+//! RMRK minting implementation
 
-use crate::impls::rmrk::{
-    errors::RmrkError,
+#![cfg_attr(not(feature = "std"), no_std)]
+#![feature(min_specialization)]
+
+pub mod trait_def;
+
+use rmrk_common::{
+    error::RmrkError,
     types::*,
 };
-pub use crate::traits::multiasset::{
+
+pub use trait_def::{
+    Events,
     Internal,
     MultiAsset,
-    MultiAssetEvents,
 };
+
 use ink_prelude::vec::Vec;
 use openbrush::{
     contracts::{
-        ownable::*,
+        ownable::{
+            self,
+            only_owner,
+        },
         psp34::extensions::enumerable::*,
     },
     modifiers,
+    storage::Mapping,
     traits::{
         AccountId,
         Storage,
         String,
     },
 };
+
+pub const STORAGE_MULTIASSET_KEY: u32 = openbrush::storage_unique_key!(MultiAssetData);
+
+#[derive(Default, Debug)]
+#[openbrush::upgradeable_storage(STORAGE_MULTIASSET_KEY)]
+pub struct MultiAssetData {
+    /// List of available asset entries for this collection
+    pub collection_asset_entries: Vec<Asset>,
+
+    /// Mapping of tokenId to an array of active assets
+    pub accepted_assets: Mapping<Id, Vec<AssetId>>,
+
+    /// Mapping of tokenId to an array of pending assets
+    pub pending_assets: Mapping<Id, Vec<AssetId>>,
+}
 
 /// Implement internal helper trait for MultiAsset
 impl<T> Internal for T
@@ -312,10 +339,7 @@ where
     fn set_priority(&mut self, token_id: Id, priorities: Vec<AssetId>) -> Result<(), PSP34Error> {
         let token_owner = self.ensure_exists(&token_id)?;
         self.ensure_token_owner(token_owner)?;
-        if let Some(accepted_assets) = self
-            .data::<MultiAssetData>()
-            .accepted_assets
-            .get(token_id.clone())
+        if let Some(accepted_assets) = self.data::<MultiAssetData>().accepted_assets.get(&token_id)
         {
             if accepted_assets.len() != priorities.len() {
                 return Err(PSP34Error::Custom(String::from(
@@ -375,7 +399,7 @@ where
 }
 
 /// Event trait for MultiAssets
-impl<T> MultiAssetEvents for T
+impl<T> Events for T
 where
     T: Storage<MultiAssetData>,
 {
