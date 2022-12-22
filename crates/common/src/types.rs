@@ -5,15 +5,12 @@ use ink_primitives::{
     Key,
     KeyPtr,
 };
-use ink_storage::{
-    traits::{
-        ExtKeyPtr,
-        PackedAllocate,
-        PackedLayout,
-        SpreadAllocate,
-        SpreadLayout,
-    },
-    Mapping,
+use ink_storage::traits::{
+    ExtKeyPtr,
+    PackedAllocate,
+    PackedLayout,
+    SpreadAllocate,
+    SpreadLayout,
 };
 use openbrush::{
     contracts::psp34::Id,

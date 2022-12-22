@@ -6,21 +6,13 @@ pub mod events;
 pub mod internal;
 pub mod traits;
 
-use rmrk_common::{
-    error::RmrkError,
-    types::*,
-};
+use rmrk_common::types::*;
 
-use ink_env::CallFlags;
 use ink_prelude::vec::Vec;
 use openbrush::{
     contracts::psp34::extensions::enumerable::*,
     storage::Mapping,
-    traits::{
-        AccountId,
-        Storage,
-        String,
-    },
+    traits::Storage,
 };
 pub use traits::{
     Events,

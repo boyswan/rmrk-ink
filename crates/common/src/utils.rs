@@ -5,10 +5,7 @@ use ink_prelude::string::{
     ToString,
 };
 
-use crate::{
-    error::RmrkError,
-    types::*,
-};
+use crate::error::RmrkError;
 
 use openbrush::{
     contracts::{
@@ -21,7 +18,6 @@ use openbrush::{
     },
     modifiers,
     traits::{
-        Balance,
         Storage,
         String,
     },

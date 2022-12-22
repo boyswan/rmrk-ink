@@ -196,8 +196,6 @@ pub mod rmrk_contract {
 
     impl Base for Simple {}
 
-    impl rmrk::util::Utils for Simple {}
-
     impl Simple {
         /// Instantiate new RMRK contract
         #[ink(constructor)]
