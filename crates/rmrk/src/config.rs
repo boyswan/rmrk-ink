@@ -18,7 +18,7 @@ use openbrush::{
     },
 };
 
-pub trait InstanceExt<T> {
+pub trait Config<T> {
     fn config(
         &mut self,
         name: String,
@@ -42,13 +42,13 @@ pub trait InstanceExt<T> {
     );
 }
 
-impl<T> InstanceExt<T> for T
+impl<T> Config<T> for T
 where
     T: openbrush::traits::DefaultEnv
         + Storage<rmrk_base::BaseData>
-        // + Storage<rmrk_minting::MintingData>
-        // + Storage<rmrk_multiasset::MultiAssetData>
-        // + Storage<rmrk_nesting::NestingData>
+        + Storage<rmrk_minting::MintingData>
+        + Storage<rmrk_multiasset::MultiAssetData>
+        + Storage<rmrk_nesting::NestingData>
         + Storage<psp34::Data<enumerable::Balances>>
         + Storage<ownable::Data>
         + Storage<metadata::Data>
@@ -78,9 +78,9 @@ where
             collection_metadata,
         );
 
-        // let minting: &mut rmrk_minting::Data = <T as StorageAsMut>::data(self);
-        // minting.max_supply = max_supply;
-        // minting.price_per_mint = price_per_mint;
+        let minting: &mut rmrk_minting::MintingData = <T as StorageAsMut>::data(self);
+        minting.max_supply = max_supply;
+        minting.price_per_mint = price_per_mint;
     }
 
     fn config_with_royalties(

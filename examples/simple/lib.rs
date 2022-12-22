@@ -34,7 +34,7 @@ pub mod rmrk_contract {
         },
         traits::*,
         types::*,
-        InstanceExt as RmrkInstanceExt,
+        Config as RmrkConfig,
     };
 
     // Event definitions
@@ -213,7 +213,7 @@ pub mod rmrk_contract {
         ) -> Self {
             ink_env::debug_println!("####### initializing RMRK contract");
             ink_lang::codegen::initialize_contract(|instance: &mut Self| {
-                RmrkInstanceExt::config(
+                RmrkConfig::config(
                     instance,
                     name,
                     symbol,

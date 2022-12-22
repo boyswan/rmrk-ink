@@ -1,8 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod instance;
+mod config;
 
-pub use instance::InstanceExt;
+pub use config::Config;
 
 pub mod error {
     pub use rmrk_common::error::*;
@@ -31,10 +31,10 @@ pub mod storage {
 }
 
 pub mod traits {
-    pub use rmrk_base::trait_def::*;
-    pub use rmrk_minting::trait_def::*;
-    pub use rmrk_multiasset::trait_def::*;
-    pub use rmrk_nesting::trait_def::*;
+    pub use rmrk_base::traits::*;
+    pub use rmrk_minting::traits::*;
+    pub use rmrk_multiasset::traits::*;
+    pub use rmrk_nesting::traits::*;
 }
 
 pub mod util {
